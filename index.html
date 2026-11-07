@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>DNA — Find out what your DNA says about you</title>
+  <meta name="description" content="Discover your ethnicity and find new relatives with a simple DNA test.">
+  <meta name="theme-color" content="#03122a">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/lexend-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/img/hero.jpg" as="image">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>document.documentElement.classList.remove("no-js");</script>
+</head>
+<body>
+  <!-- 3D stage: pre-rendered Blender (Cycles) fly-through, played clip by clip -->
+  <div class="stage" aria-hidden="true">
+    <div class="stage__parallax">
+      <div class="stage__drift" id="stage">
+        <img class="stage__still is-visible" src="assets/img/hero.jpg" alt="" data-still>
+        <img class="stage__still" alt="" data-still>
+      </div>
+    </div>
+    <div class="stage__shade"></div>
+  </div>
+
+  <header class="header">
+    <a class="logo" href="#home" data-goto="0" aria-label="Home">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" fill="currentColor"/><path d="M12 10h5v8h6v-8h5v20h-5v-8h-6v8h-5z" fill="#05070c"/></svg>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu">
+      <span class="menu-toggle__label menu-toggle__label--open">menu</span>
+      <span class="menu-toggle__label menu-toggle__label--close">close</span>
+    </button>
+  </header>
+
+  <main class="panels">
+    <section class="panel panel--hero" id="home" data-index="0" aria-label="Introduction">
+      <div class="panel__text">
+        <h1 class="title">
+          <span class="line"><span>Find out what your</span></span>
+          <span class="line"><span>DNA says about you</span></span>
+          <span class="line"><span>and your family.</span></span>
+        </h1>
+        <p class="lead">
+          <span class="line"><span>Discover your ethnicity and find new</span></span>
+          <span class="line"><span>relatives with a simple DNA test.</span></span>
+        </p>
+        <a class="cta" href="#order"><span class="line"><span><svg class="chev" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Order now</span></span></a>
+      </div>
+      <button class="watch" type="button" data-watch>
+        <span class="watch__ring"><span class="watch__btn"><svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5z" fill="currentColor"/></svg></span></span>
+        <span class="watch__label">Watch video</span>
+      </button>
+    </section>
+
+    <section class="panel panel--change" id="change" data-index="1" aria-label="How DNA testing changes you">
+      <div class="panel__text">
+        <h2 class="title">
+          <span class="line"><span>How will DNA testing</span></span>
+          <span class="line"><span>change you?</span></span>
+        </h2>
+        <p class="lead">
+          <span class="line"><span>Testing your DNA offers you a powerful tool</span></span>
+          <span class="line"><span>for researching what makes you unique.</span></span>
+        </p>
+        <a class="cta" href="#stories"><span class="line"><span><svg class="chev" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>View success stories</span></span></a>
+      </div>
+    </section>
+
+    <section class="panel panel--ancestry" id="ancestry" data-index="2" aria-label="Ancestry">
+      <div class="panel__text">
+        <h2 class="title">
+          <span class="line"><span>What part of the</span></span>
+          <span class="line"><span>world do your</span></span>
+          <span class="line"><span>ancestors come from?</span></span>
+        </h2>
+        <p class="lead">
+          <span class="line"><span>What part of the world do your</span></span>
+          <span class="line"><span>ancestors come from?</span></span>
+        </p>
+        <a class="cta" href="#ancestry-more"><span class="line"><span><svg class="chev" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Learn more</span></span></a>
+      </div>
+    </section>
+  </main>
+
+  <nav class="pager" aria-label="Sections">
+    <button type="button" data-goto="0" aria-label="Introduction"><i></i></button>
+    <button type="button" data-goto="1" aria-label="How DNA testing changes you"><i></i></button>
+    <button type="button" data-goto="2" aria-label="Ancestry"><i></i></button>
+  </nav>
+
+  <div class="menu" id="menu" aria-hidden="true">
+    <nav class="menu__nav" aria-label="Main">
+      <a href="#home" data-goto="0"><span class="line"><span><em>01</em>Home</span></span></a>
+      <a href="#change" data-goto="1"><span class="line"><span><em>02</em>How it works</span></span></a>
+      <a href="#ancestry" data-goto="2"><span class="line"><span><em>03</em>Ancestry</span></span></a>
+      <a href="#stories"><span class="line"><span><em>04</em>Success stories</span></span></a>
+      <a href="#order"><span class="line"><span><em>05</em>Order now</span></span></a>
+    </nav>
+    <p class="menu__foot"><span class="line"><span>Discover your ethnicity and find new relatives with a simple DNA test.</span></span></p>
+  </div>
+
+  <div class="modal" id="film" role="dialog" aria-modal="true" aria-label="Video" aria-hidden="true">
+    <button class="modal__close" type="button" aria-label="Close video"><span></span><span></span></button>
+    <div class="modal__frame">
+      <video class="modal__video" playsinline muted loop preload="none" poster="assets/img/hero.jpg"></video>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js" defer></script>
+</body>
+</html>
