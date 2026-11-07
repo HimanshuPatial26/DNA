@@ -17,7 +17,8 @@ FPS = 30
 # --- poses ---------------------------------------------------------------
 # loc / target in scene units, roll in degrees, lens in mm.
 POSES = {
-    "hero": dict(loc=(6.5, -17.0, 3.0), target=(0.6, 0.0, 0.0), roll=40.0, lens=38.0, fstop=2.8),
+    "hero": dict(loc=(4.3, -10.7, 1.9), target=(0.6, 0.0, 0.0), roll=42.0, lens=38.0, fstop=2.8,
+                 shift=(0.0, 0.06)),
     "s2": dict(loc=(-2.1, -1.0, -1.45), target=(0.9, 0.55, 0.55), roll=-105.0, lens=26.0, fstop=0.3,
                focus_point=(0.0, 0.242, 0.0), shift=(0.08, 0.04)),
     "s3": dict(loc=(-0.85, 0.0, 0.22), target=(0.0, 0.242, 0.0), roll=-95.0, lens=38.0, fstop=1.1,

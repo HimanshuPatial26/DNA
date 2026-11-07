@@ -75,5 +75,5 @@ python blender/encode.py renders/post assets
   moves between them. The website's clip boundaries come from `MARKS`.
 * `blender/preview.py`: fast low-res look-dev renders of named poses or frames.
 
-On a 4-core CPU a full render takes roughly 45–60 minutes. To change a shot, edit
+On a 4-core CPU a full render takes about 70 minutes (roughly 30 s per frame). To change a shot, edit
 `POSES` or `SEGMENTS` in `camera_path.py` and re-run the three steps.

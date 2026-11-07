@@ -251,7 +251,7 @@ def emission(name, color, strength):
 def backbone_material(name, circuit):
     """Dark navy metal with fine machined grooves; optional cyan circuitry on
     the inner face (UV v≈0) made of dashed data lanes plus a perforated band."""
-    m = principled(name, (0.030, 0.045, 0.085), metallic=0.75, rough=0.34, coat=0.7, coat_rough=0.06)
+    m = principled(name, (0.040, 0.055, 0.10), metallic=0.8, rough=0.4, coat=0.7, coat_rough=0.06)
     nt = m.node_tree
     N = nt.nodes
     L = nt.links
@@ -339,7 +339,7 @@ def backbone_material(name, circuit):
     L.new(col.outputs[2], bsdf.inputs["Emission Color"])
     L.new(math_node("MULTIPLY", lanes_on, vb=5.0), bsdf.inputs["Emission Strength"])
     # lanes are recessed glass strips: darker, smoother base
-    rough = math_node("ADD", math_node("MULTIPLY", lanes_on, vb=-0.25), vb=0.34)
+    rough = math_node("ADD", math_node("MULTIPLY", lanes_on, vb=-0.3), vb=0.4)
     L.new(rough, bsdf.inputs["Roughness"])
     return m
 
@@ -354,7 +354,7 @@ def build_dna():
         "metal": principled("DarkMetal", (0.045, 0.055, 0.075), metallic=0.92, rough=0.24, coat=0.5),
         "chrome": principled("Chrome", (0.22, 0.25, 0.30), metallic=1.0, rough=0.18),
         "glass": principled("Glass", (0.55, 0.65, 0.78), metallic=0.0, rough=0.06, transmission=1.0, ior=1.45),
-        "orange": emission("GlowOrange", (1.0, 0.36, 0.035), 6.0),
+        "orange": emission("GlowOrange", (1.0, 0.36, 0.035), 5.0),
         "core": emission("GlowCore", (1.0, 0.50, 0.11), 4.5),
         "blue": emission("GlowBlue", (0.08, 0.45, 1.0), 6.0),
         "tube": principled("RungTube", (0.05, 0.06, 0.08), metallic=0.85, rough=0.2, coat=0.8, coat_rough=0.03),
@@ -397,9 +397,9 @@ def build_dna():
                 (M["metal"], [(hub_half, TUBE_R * 1.10), (hub_half, TUBE_R * 0.92)]),
             ], None, n=N_AROUND)
             # thin glowing bands at the collar edges (not on every hub)
-            if rng.random() < 0.8:
+            if rng.random() < 0.55:
                 torus(mb, p + tan * (hub_half + 0.004), tan, TUBE_R * 1.04, 0.0075, M["orange"], n_major=48, n_minor=8)
-            if rng.random() < 0.5:
+            if rng.random() < 0.3:
                 torus(mb, p - tan * (hub_half + 0.004), tan, TUBE_R * 1.04, 0.0075, M["orange"], n_major=48, n_minor=8)
 
     # rungs
@@ -476,7 +476,7 @@ def area_light(name, loc, target, color, energy, size):
 
 def setup_lights():
     # cool top light -> blue-grey sheen on the upper edges of the tubes
-    area_light("Top", (0, -2, 9), (0, 0, 0), (0.35, 0.55, 1.0), 900, 14)
+    area_light("Top", (0, -2, 9), (0, 0, 0), (0.42, 0.55, 1.0), 1500, 14)
     # strong blue rim from behind
     area_light("Rim", (4, 12, 3), (0, 0, 0), (0.2, 0.45, 1.0), 1800, 10)
     # faint warm kicker from below (reflected glow)

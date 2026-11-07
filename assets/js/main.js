@@ -233,10 +233,13 @@
     go((index - state + N) % N === 1 ? 1 : -1);
   }
 
-  // wheel / trackpad: one gesture = one section
+  // wheel / trackpad: one gesture = one section. A gesture is "consumed" once
+  // it has moved the page; its trailing inertia is ignored until the stream
+  // pauses or a fresh swipe shows up as a jump in delta.
   let wheelAcc = 0;
-  let wheelReset = 0;
   let lastWheel = 0;
+  let lastDelta = 0;
+  let consumed = false;
   window.addEventListener(
     "wheel",
     (e) => {
@@ -244,18 +247,23 @@
       e.preventDefault();
       if (menuOpen) return;
       const now = performance.now();
+      const d = e.deltaY || e.deltaX;
       const gap = now - lastWheel;
-      lastWheel = now;
-      if (busy) return;
-      // swallow trailing inertia of the gesture that triggered the last move
-      if (now - unlockedAt < 900 && gap < 120) return;
-      wheelAcc += e.deltaY || e.deltaX;
-      clearTimeout(wheelReset);
-      wheelReset = setTimeout(() => (wheelAcc = 0), 180);
-      if (Math.abs(wheelAcc) > 30) {
-        const d = Math.sign(wheelAcc);
+      if (gap > 160) {
+        consumed = false;
         wheelAcc = 0;
-        go(d);
+      } else if (Math.abs(d) > Math.abs(lastDelta) * 1.8 && Math.abs(d) > 14 && now - unlockedAt > 250) {
+        consumed = false;
+      }
+      lastWheel = now;
+      lastDelta = d;
+      if (busy || consumed) return;
+      wheelAcc += d;
+      if (Math.abs(wheelAcc) > 30) {
+        consumed = true;
+        const dir = Math.sign(wheelAcc);
+        wheelAcc = 0;
+        go(dir);
       }
     },
     { passive: false }
