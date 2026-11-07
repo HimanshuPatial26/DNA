@@ -1,0 +1,14 @@
+{
+  "name": "dna-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-screen DNA-testing landing page with a pre-rendered Blender (Cycles) helix fly-through.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

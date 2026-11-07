@@ -1,0 +1,7 @@
+# Python packages for the render pipeline (blender/*.py).
+# bpy 5.2 is Blender as a Python module and requires Python 3.13.
+# ffmpeg (with libx264 and libvpx-vp9) must also be installed for encode.py.
+bpy==5.2.3
+numpy==2.5.4
+OpenEXR==3.5.3
+opencv-python-headless==5.0.0.93
