@@ -72,6 +72,7 @@
   }
 
   function setActive(i) {
+    root.dataset.state = String(i);
     pagerBtns.forEach((b) => b.classList.toggle("is-active", Number(b.dataset.goto) === i));
     const id = panels[i].id;
     if (history.replaceState) history.replaceState(null, "", i === 0 ? location.pathname + location.search : "#" + id);
