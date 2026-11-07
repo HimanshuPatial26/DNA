@@ -45,10 +45,11 @@ const server = createServer((req, res) => {
 
   let path;
   try {
-    path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    path = decodeURIComponent(req.url.split(/[?#]/)[0]).replace(/\/{2,}/g, "/");
   } catch {
     return send(res, 400, "Bad request");
   }
+  if (!path.startsWith("/")) path = "/" + path;
   // never serve dotfiles such as .git/
   if (path.split("/").some((part) => part.startsWith("."))) return send(res, 404, "Not found");
   if (path.endsWith("/")) path += "index.html";
