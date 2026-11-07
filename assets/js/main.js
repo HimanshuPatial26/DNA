@@ -17,7 +17,9 @@
   const STILLS = ["assets/img/hero.jpg", "assets/img/s2.jpg", "assets/img/s3.jpg"];
   const FWD = ["t1", "t2", "t3"]; // i -> i + 1
   const REV = ["t1r", "t2r", "t3r"]; // i + 1 -> i
-  const LOAD_ORDER = ["t1", "t3r", "t2", "t1r", "t3", "t2r"];
+  const IDLE = ["idle0", "idle1", "idle2"]; // seamless loops played while a section rests
+  const IDLE_FADE = 260; // ms: blend from a finished move into its idle loop
+  const MOVE_FADE = 320; // ms: blend from a drifting idle loop into a move
   // H.264 MP4 where it is natively supported (Safari, Chrome, Edge), VP9 WebM otherwise
   const probe = document.createElement("video");
   const EXT = probe.canPlayType('video/mp4; codecs="avc1.640028"') === "probably" ? ".mp4" : ".webm";
@@ -39,6 +41,8 @@
   let menuOpen = false;
   let modalOpen = false;
   let topZ = 2;
+  let idleToken = 0;
+  let visibleIdle = null;
   const clips = {};
 
   /* ------------------------------------------------------------ text setup */
@@ -82,6 +86,7 @@
   function makeClip(name) {
     const v = document.createElement("video");
     v.className = "stage__video";
+    v.loop = IDLE.includes(name);
     v.muted = true;
     v.defaultMuted = true;
     v.playsInline = true;
@@ -116,22 +121,61 @@
   }
 
   async function loadAll() {
-    LOAD_ORDER.forEach(makeClip);
-    for (const name of LOAD_ORDER) {
+    // what the visitor needs first: this section's loop, then the moves out of it
+    const order = [IDLE[state], FWD[state], REV[(state + N - 1) % N], ...IDLE, ...FWD, ...REV];
+    const names = order.filter((n, i) => order.indexOf(n) === i);
+    names.forEach(makeClip);
+    for (const name of names) {
       await loadClip(clips[name]);
+      // bring the resting section to life as soon as its loop is ready
+      if (name === IDLE[state] && !busy && !visibleIdle) startIdle(state, 600);
     }
   }
 
   function hideOthers(keep) {
     Object.values(clips).forEach((o) => {
-      if (o.video !== keep) o.video.classList.remove("is-visible");
+      if (o.video === keep) return;
+      o.video.classList.remove("is-visible");
+      if (o.video.loop) o.video.pause();
     });
     stills.forEach((s) => {
       if (s !== keep) s.classList.remove("is-visible");
     });
   }
 
-  function playClip(c) {
+  function reveal(v, fadeMs) {
+    v.style.zIndex = String(++topZ);
+    v.style.transition = fadeMs ? `opacity ${fadeMs}ms ease-out` : "none";
+    v.classList.add("is-visible");
+    setTimeout(() => {
+      if (v.classList.contains("is-visible")) hideOthers(v);
+    }, fadeMs + 40);
+  }
+
+  function startIdle(i, fadeMs) {
+    const c = clips[IDLE[i]];
+    if (!c || !c.ready || reduceMotion.matches) return;
+    const token = ++idleToken;
+    const v = c.video;
+    let shown = false;
+    const show = () => {
+      if (shown || token !== idleToken) return;
+      shown = true;
+      visibleIdle = c;
+      reveal(v, fadeMs);
+    };
+    try {
+      v.currentTime = 0;
+    } catch (e) {
+      /* not seekable yet */
+    }
+    if ("requestVideoFrameCallback" in v) v.requestVideoFrameCallback(show);
+    else v.addEventListener("playing", show, { once: true });
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+
+  function playClip(c, fadeMs = 0) {
     return new Promise((resolve, reject) => {
       const v = c.video;
       let shown = false;
@@ -139,9 +183,7 @@
       const show = () => {
         if (shown) return;
         shown = true;
-        v.style.zIndex = String(++topZ);
-        v.classList.add("is-visible");
-        requestAnimationFrame(() => hideOthers(v));
+        reveal(v, fadeMs);
       };
       const finish = () => {
         if (finished) return;
@@ -212,14 +254,19 @@
     leave(panels[from]);
     setActive(to);
     const enterTimer = setTimeout(() => enter(panels[to]), Math.max(350, dur - 450));
+    // the idle loop has drifted off the section pose, so blend into the move
+    const fade = visibleIdle ? MOVE_FADE : 0;
+    idleToken++;
+    visibleIdle = null;
 
     try {
-      if (useVideo) await playClip(c);
+      if (useVideo) await playClip(c, fade);
       else await crossfadeTo(to);
     } catch (e) {
       await crossfadeTo(to);
     }
     state = to;
+    startIdle(to, IDLE_FADE);
     // make sure the copy is in even if the clip ended early
     clearTimeout(enterTimer);
     if (!panels[to].classList.contains("is-in")) enter(panels[to]);
@@ -335,6 +382,7 @@
   function openModal() {
     if (busy) return;
     modalOpen = true;
+    if (visibleIdle) visibleIdle.video.pause();
     if (!modalVideo.getAttribute("src")) modalVideo.src = VIDEO_DIR + "film" + EXT;
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
@@ -347,7 +395,20 @@
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
     setTimeout(() => modalVideo.pause(), 500);
+    resumeIdle();
   }
+
+  function resumeIdle() {
+    if (!visibleIdle || document.hidden || modalOpen) return;
+    const p = visibleIdle.video.play();
+    if (p && p.catch) p.catch(() => {});
+  }
+  // save battery: stop the idle loop while the tab is in the background
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (visibleIdle) visibleIdle.video.pause();
+    } else resumeIdle();
+  });
   document.querySelectorAll("[data-watch]").forEach((b) => b.addEventListener("click", openModal));
   modal.querySelector(".modal__close").addEventListener("click", closeModal);
   modal.addEventListener("click", (e) => {

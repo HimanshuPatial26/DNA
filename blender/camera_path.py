@@ -115,6 +115,65 @@ def camera_state(frame):
                 focus=_dist(p["loc"], _focus_point(p)), fstop=p["fstop"])
 
 
+# --- idle loops ------------------------------------------------------------
+# While a section is on screen the site plays a short seamless loop: the camera
+# floats on a small ellipse around its pose and an energy pulse sweeps along the
+# helix. Every loop starts and ends exactly on the section's pose (t = 0 / 1).
+IDLE_FPS = 15                 # rendered rate; blended up to FPS when encoding
+IDLE_FRAMES = 75              # 5 s loop
+IDLE = {
+    # amp: (right, up) half-size of the camera ellipse in scene units
+    # roll: degrees; pulse: x range the pulse centre sweeps, width, strength
+    "hero": dict(amp=(0.42, 0.26), roll=0.7, pulse=(-14.0, 14.0), width=3.0, gain=1.6),
+    "s2": dict(amp=(0.07, 0.045), roll=1.0, pulse=(-6.0, 12.0), width=2.0, gain=1.6),
+    "s3": dict(amp=(0.022, 0.015), roll=1.2, pulse=(-5.0, 5.0), width=1.5, gain=1.4),
+}
+IDLE_STATES = ["hero", "s2", "s3"]
+
+
+def _sub(a, b):
+    return tuple(x - y for x, y in zip(a, b))
+
+
+def _norm(a):
+    n = math.sqrt(sum(x * x for x in a)) or 1.0
+    return tuple(x / n for x in a)
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def idle_state(name, t):
+    """Camera + pulse for idle loop `name` at loop phase t in [0, 1)."""
+    p = POSES[name]
+    cfg = IDLE[name]
+    fwd = _norm(_sub(p["target"], p["loc"]))
+    right = _norm(_cross(fwd, (0.0, 0.0, 1.0)))
+    up = _cross(right, fwd)
+    a = 2 * math.pi * t
+    ox = cfg["amp"][0] * math.sin(a)
+    oy = cfg["amp"][1] * (1 - math.cos(a))
+    off = tuple(r * ox + u * oy for r, u in zip(right, up))
+    loc = tuple(l + o for l, o in zip(p["loc"], off))
+    tgt = tuple(g + 0.25 * o for g, o in zip(p["target"], off))
+    x0, x1 = cfg["pulse"]
+    return dict(
+        loc=loc,
+        target=tgt,
+        shift=p.get("shift", (0, 0)),
+        roll=p["roll"] + cfg["roll"] * math.sin(a),
+        lens=p["lens"],
+        focus=max(0.05, _dist(loc, _focus_point(p))),
+        fstop=p["fstop"],
+        # energy pulse: fades in/out with the loop so t = 0 matches the pose frame
+        pulse_x=x0 + (x1 - x0) * t,
+        pulse_w=cfg["width"],
+        pulse_gain=cfg["gain"] * math.sin(math.pi * t) ** 2,
+    )
+
+
 if __name__ == "__main__":
     import json
-    print(json.dumps({"marks": MARKS, "frames": FRAME_COUNT, "fps": FPS}))
+    print(json.dumps({"marks": MARKS, "frames": FRAME_COUNT, "fps": FPS,
+                      "idle": {"states": IDLE_STATES, "frames": IDLE_FRAMES, "fps": IDLE_FPS}}))

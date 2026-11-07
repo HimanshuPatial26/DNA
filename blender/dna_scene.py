@@ -234,6 +234,41 @@ def principled(name, base, metallic=0.0, rough=0.4, coat=0.0, coat_rough=0.05,
     return m
 
 
+PULSE_NODES = ("PulseX", "PulseW", "PulseGain")
+
+
+def pulse_factor(nt, scale=1.0):
+    """Socket = 1 + gain * scale * exp(-((world_x - PulseX) / PulseW)^2).
+
+    The idle loops sweep PulseX along the helix; with PulseGain = 0 (the
+    default, used by every transition frame) the factor is exactly 1."""
+    N, L = nt.nodes, nt.links
+
+    def value(name, v):
+        n = N.get(name) or N.new("ShaderNodeValue")
+        n.name = n.label = name
+        n.outputs[0].default_value = v
+        return n.outputs[0]
+
+    def op(kind, a, b=None, vb=None):
+        n = N.new("ShaderNodeMath")
+        n.operation = kind
+        L.new(a, n.inputs[0])
+        if b is not None:
+            L.new(b, n.inputs[1])
+        elif vb is not None:
+            n.inputs[1].default_value = vb
+        return n.outputs[0]
+
+    geo = N.new("ShaderNodeNewGeometry")
+    sep = N.new("ShaderNodeSeparateXYZ")
+    L.new(geo.outputs["Position"], sep.inputs[0])
+    d = op("DIVIDE", op("SUBTRACT", sep.outputs["X"], value("PulseX", -1000.0)), value("PulseW", 2.0))
+    e = op("EXPONENT", op("MULTIPLY", op("MULTIPLY", d, d), vb=-1.0))
+    g = op("MULTIPLY", value("PulseGain", 0.0), vb=scale)
+    return op("ADD", op("MULTIPLY", e, g), vb=1.0)
+
+
 def emission(name, color, strength):
     m = bpy.data.materials.new(name)
     m.use_nodes = True
@@ -243,9 +278,23 @@ def emission(name, color, strength):
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     em = nt.nodes.new("ShaderNodeEmission")
     em.inputs["Color"].default_value = (*color, 1)
-    em.inputs["Strength"].default_value = strength
+    mul = nt.nodes.new("ShaderNodeMath")
+    mul.operation = "MULTIPLY"
+    mul.inputs[0].default_value = strength
+    nt.links.new(pulse_factor(nt), mul.inputs[1])
+    nt.links.new(mul.outputs[0], em.inputs["Strength"])
     nt.links.new(em.outputs[0], out.inputs[0])
     return m
+
+
+def set_pulse(x, width, gain):
+    for m in bpy.data.materials:
+        if not m.node_tree:
+            continue
+        for name, v in zip(PULSE_NODES, (x, width, gain)):
+            n = m.node_tree.nodes.get(name)
+            if n:
+                n.outputs[0].default_value = v
 
 
 def backbone_material(name, circuit):
@@ -337,7 +386,8 @@ def backbone_material(name, circuit):
     L.new(comb.outputs[0], wn2.inputs["Vector"])
     L.new(wn2.outputs["Value"], col.inputs[0])
     L.new(col.outputs[2], bsdf.inputs["Emission Color"])
-    L.new(math_node("MULTIPLY", lanes_on, vb=5.0), bsdf.inputs["Emission Strength"])
+    L.new(math_node("MULTIPLY", math_node("MULTIPLY", lanes_on, vb=5.0), pulse_factor(nt, 1.5)),
+           bsdf.inputs["Emission Strength"])
     # lanes are recessed glass strips: darker, smoother base
     rough = math_node("ADD", math_node("MULTIPLY", lanes_on, vb=-0.3), vb=0.4)
     L.new(rough, bsdf.inputs["Roughness"])
@@ -524,7 +574,7 @@ def setup_render(res, samples, motion_blur):
 # Camera
 # --------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from camera_path import camera_state, FRAME_COUNT  # noqa: E402
+from camera_path import FRAME_COUNT, IDLE_FRAMES, IDLE_STATES, camera_state, idle_state  # noqa: E402
 
 
 def setup_camera():
@@ -589,6 +639,7 @@ def main():
     ap.add_argument("--frames", default="all", help="'all', 'a-b', or comma list")
     ap.add_argument("--no-mblur", action="store_true")
     ap.add_argument("--save-blend", default="")
+    ap.add_argument("--idle", default="", help="render idle loops instead: 'all' or e.g. 'hero,s3'")
     args = ap.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:])
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -602,6 +653,10 @@ def main():
 
     if args.save_blend:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args.save_blend))
+
+    if args.idle:
+        render_idle(cam, args)
+        return
 
     if args.frames == "all":
         frames = list(range(FRAME_COUNT))
@@ -621,6 +676,38 @@ def main():
         sc.render.filepath = path
         bpy.ops.render.render(write_still=True)
         print(f"rendered {f}", flush=True)
+
+
+def place_camera(cam, st):
+    loc = Vector(st["loc"])
+    q = (Vector(st["target"]) - loc).normalized().to_track_quat("-Z", "Z")
+    cam.animation_data_clear()
+    cam.data.animation_data_clear()
+    cam.matrix_world = Matrix.Translation(loc) @ q.to_matrix().to_4x4() @ Matrix.Rotation(math.radians(st["roll"]), 4, "Z")
+    cam.data.lens = st["lens"]
+    cam.data.shift_x, cam.data.shift_y = st.get("shift", (0, 0))
+    cam.data.dof.focus_distance = st["focus"]
+    cam.data.dof.aperture_fstop = st["fstop"]
+
+
+def render_idle(cam, args):
+    """Seamless idle loops: <out>/idle_<state>/f_0000.exr ... (IDLE_FRAMES each)."""
+    sc = bpy.context.scene
+    sc.render.use_motion_blur = False  # the drift is far too slow to need it
+    states = IDLE_STATES if args.idle == "all" else args.idle.split(",")
+    for name in states:
+        out = os.path.join(os.path.abspath(args.out), f"idle_{name}")
+        os.makedirs(out, exist_ok=True)
+        for i in range(IDLE_FRAMES):
+            path = os.path.join(out, f"f_{i:04d}.exr")
+            if os.path.exists(path):
+                continue
+            st = idle_state(name, i / IDLE_FRAMES)
+            place_camera(cam, st)
+            set_pulse(st["pulse_x"], st["pulse_w"], st["pulse_gain"])
+            sc.render.filepath = path
+            bpy.ops.render.render(write_still=True)
+            print(f"rendered idle {name} {i}", flush=True)
 
 
 if __name__ == "__main__":

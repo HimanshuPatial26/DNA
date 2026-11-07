@@ -67,7 +67,7 @@ index.html               markup: header, three panels, pager, menu, video modal
 assets/
   css/style.css          layout, typography, masked line reveals, responsive rules
   js/main.js             clip playback, section state machine, wheel/key/touch input
-  video/                 t1..t3 forward + t1r..t3r reversed camera moves, film (full loop)
+  video/                 t1..t3 forward + t1r..t3r reversed camera moves, idle0..2 loops, film
                          each in .mp4 (H.264) and .webm (VP9); the browser picks one
   img/                   hero.jpg / s2.jpg / s3.jpg section stills, favicon.svg
   fonts/                 Lexend (SIL Open Font License, see OFL.txt)
@@ -87,7 +87,10 @@ package.json             `npm start`
   reduced motion, the page cross-fades between section stills instead.
 * One trackpad swipe moves exactly one section: the momentum tail is ignored until
   the gesture ends.
-* While a section is idle, a slow CSS drift and a light mouse parallax keep the frame moving.
+* While a section rests, a seamless 5-second **idle loop** plays (`idle0..2`). The camera
+  floats on a small ellipse and an energy pulse sweeps along the helix, lighting up the
+  rings and circuitry. Each loop starts and ends exactly on the section's pose; short
+  crossfades blend it with the camera moves. A light mouse parallax adds depth.
 * Editing the copy: change the text in `index.html`. Each `<span class="line">` is one
   masked line on desktop. On phones the lines re-wrap automatically.
 
@@ -109,21 +112,26 @@ pip install -r blender/requirements.txt
 # 1. render linear RGBA EXR frames with Cycles (141 frames)
 python blender/dna_scene.py --out renders/frames --res 1600x900 --samples 48
 
+# 1b. render the three idle loops (225 frames at 15 fps, blended to 30 fps later)
+python blender/dna_scene.py --out renders/idle --res 1600x900 --samples 48 --idle all
+
 # 2. background gradient + bloom + filmic tone map  ->  PNG
 python blender/post.py renders/frames renders/post
+for s in hero s2 s3; do python blender/post.py renders/idle/idle_$s renders/post-idle/idle_$s; done
 
 # 3. cut into web clips + stills (overwrites assets/video and assets/img)
-python blender/encode.py renders/post assets
+python blender/encode.py renders/post assets --idle renders/post-idle
 ```
 
-On a 4-core CPU step 1 takes about 70 minutes (roughly 30 s per frame); a GPU is much faster.
+On a 4-core CPU step 1 takes about 70 minutes and step 1b about 1¾ hours (roughly 30 s per
+frame); a GPU is much faster. Use `encode.py --skip-transitions` to re-encode only the loops.
 `renders/` is git-ignored. Re-running step 1 skips frames that already exist, so
 delete `renders/frames` after changing the scene.
 
 | File | Purpose |
 | --- | --- |
 | `blender/dna_scene.py` | Builds the helix: swept backbone tubes with machined grooves and cyan "data-lane" circuitry, T-junction hubs, rungs with glass tips and concentric glowing lenses, and floating rings. Also sets up the lights, depth of field and motion blur. |
-| `blender/camera_path.py` | Camera pose per section (`POSES`) and the eased spline moves between them (`SEGMENTS`). The site's clip boundaries come from `MARKS`. |
+| `blender/camera_path.py` | Camera pose per section (`POSES`), the eased spline moves between them (`SEGMENTS`) and the idle-loop drift and energy pulse (`IDLE`). The site's clip boundaries come from `MARKS`. |
 | `blender/preview.py` | Fast low-res look-dev renders: `python blender/preview.py --out /tmp/prev hero s2 s3 wide`. |
 | `blender/post.py` | Background gradient, bloom, vignette and tone mapping. |
 | `blender/encode.py` | Encodes forward/reversed clips, the full film and the stills. |

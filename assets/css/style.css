@@ -64,13 +64,6 @@ img, video { -webkit-user-drag: none; user-select: none; }
 .stage__drift {
   position: absolute;
   inset: 0;
-  animation: drift 18s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-@keyframes drift {
-  from { transform: scale(1) translate3d(0, 0, 0); }
-  to   { transform: scale(1.035) translate3d(-.6%, .35%, 0); }
 }
 
 .stage__still,
@@ -477,6 +470,6 @@ html[data-state="2"] .stage__scrim--2 { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage__drift, .watch__ring::after { animation: none; }
+  .watch__ring::after { animation: none; }
   .stage__parallax { transition: none; transform: none; }
 }
